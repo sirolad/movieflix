@@ -1,0 +1,7 @@
+tmp/
+.DS_Store
+.vscode/
+.history/
+*.log
+.air.toml
+.env
