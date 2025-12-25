@@ -32,8 +32,8 @@ func (m *MockUserService) LogoutUser(ctx context.Context, userId string) error {
 	return args.Error(0)
 }
 
-func (m *MockUserService) RefreshToken(ctx context.Context, userId string) (string, string, error) {
-	args := m.Called(ctx, userId)
+func (m *MockUserService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+	args := m.Called(ctx, refreshToken)
 	return args.String(0), args.String(1), args.Error(2)
 }
 

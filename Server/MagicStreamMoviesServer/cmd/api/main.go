@@ -93,6 +93,14 @@ func main() {
 	router.Use(cors.New(corsConfig))
 
 	// Routes
+	router.Any("/", func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.Status(204)
+			return
+		}
+		c.JSON(200, gin.H{"status": "ok", "message": "MagicStreamMovies API Running"})
+	})
+
 	router.GET("/hello", func(c *gin.Context) {
 		c.String(200, "Hello, MagicStreamMovies!")
 	})

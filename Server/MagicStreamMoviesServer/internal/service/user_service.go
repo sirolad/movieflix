@@ -16,7 +16,7 @@ type UserService interface {
 	RegisterUser(ctx context.Context, user models.User) (*models.User, error)
 	LoginUser(ctx context.Context, email, password string) (*models.UserResponse, error)
 	LogoutUser(ctx context.Context, userId string) error
-	RefreshToken(ctx context.Context, userId string) (string, string, error) // Simplified for now
+	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 }
 
 type userService struct {
@@ -105,11 +105,35 @@ func (s *userService) LogoutUser(ctx context.Context, userId string) error {
 	return s.repo.UpdateTokens(ctx, userId, "", "", updateAt)
 }
 
-func (s *userService) RefreshToken(ctx context.Context, userId string) (string, string, error) {
-	// Not fully implemented in original code, just a placeholder handler.
-	// Implementing basic logic assuming we would regenerate based on stored info or incoming token.
-	// For now, let's leave it as is or implement if needed. 
-	// The original handler code was cut off in read_files.
-	// But assuming standard flow: verify refresh token, issue new pair.
-	return "", "", nil
+func (s *userService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+	claims, err := utils.ValidateToken(refreshToken, s.config.SecretRefreshKey)
+	if err != nil {
+		return "", "", errors.New("invalid or expired refresh token")
+	}
+
+	user, err := s.repo.GetUserByUserID(ctx, claims.UserId)
+	if err != nil {
+		return "", "", errors.New("user not found")
+	}
+
+	signedToken, signedRefreshToken, err := utils.GenerateAllTokens(
+		user.Email,
+		user.FirstName,
+		user.LastName,
+		user.Role,
+		user.UserID,
+		s.config.SecretKey,
+		s.config.SecretRefreshKey,
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	updateAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	err = s.repo.UpdateTokens(ctx, user.UserID, signedToken, signedRefreshToken, updateAt)
+	if err != nil {
+		return "", "", err
+	}
+
+	return signedToken, signedRefreshToken, nil
 }

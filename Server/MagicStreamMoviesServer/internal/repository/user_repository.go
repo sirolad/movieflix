@@ -14,6 +14,7 @@ import (
 type UserRepository interface {
 	CreateUser(ctx context.Context, user models.User) (*mongo.InsertOneResult, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByUserID(ctx context.Context, userID string) (*models.User, error)
 	CountUsersByEmail(ctx context.Context, email string) (int64, error)
 	UpdateTokens(ctx context.Context, userId string, token string, refreshToken string, updatedAt time.Time) error
 	GetUserFavouriteGenres(ctx context.Context, userId string) ([]string, error)
@@ -36,6 +37,15 @@ func (r *mongoUserRepository) CreateUser(ctx context.Context, user models.User) 
 func (r *mongoUserRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
 	err := r.userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *mongoUserRepository) GetUserByUserID(ctx context.Context, userID string) (*models.User, error) {
+	var user models.User
+	err := r.userCollection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}

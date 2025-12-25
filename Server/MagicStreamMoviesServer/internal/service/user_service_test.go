@@ -8,6 +8,7 @@ import (
 	"github.com/sirolad/MagicStreamMovies/Server/MagicStreamMovies/Server/internal/mocks"
 	"github.com/sirolad/MagicStreamMovies/Server/MagicStreamMovies/Server/internal/models"
 	"github.com/sirolad/MagicStreamMovies/Server/MagicStreamMovies/Server/internal/service"
+	"github.com/sirolad/MagicStreamMovies/Server/MagicStreamMovies/Server/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -69,4 +70,49 @@ func TestRegisterUser_UserExists(t *testing.T) {
 	mockRepo.AssertNotCalled(t, "CreateUser")
 
 	mockRepo.AssertExpectations(t)
+}
+
+func TestRefreshToken_Success(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepository)
+	cfg := &config.Config{
+		SecretKey:        "secret",
+		SecretRefreshKey: "refresh_secret",
+	}
+	svc := service.NewUserService(mockRepo, cfg)
+
+	// Generate a valid refresh token first
+	_, refreshToken, err := utils.GenerateAllTokens("test@example.com", "John", "Doe", "USER", "user123", "secret", "refresh_secret")
+	assert.NoError(t, err)
+
+	user := models.User{
+		UserID:    "user123",
+		Email:     "test@example.com",
+		FirstName: "John",
+		LastName:  "Doe",
+		Role:      "USER",
+	}
+
+	mockRepo.On("GetUserByUserID", mock.Anything, "user123").Return(&user, nil)
+	mockRepo.On("UpdateTokens", mock.Anything, "user123", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	newToken, newRefreshToken, err := svc.RefreshToken(context.Background(), refreshToken)
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, newToken)
+	assert.NotEmpty(t, newRefreshToken)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestRefreshToken_InvalidToken(t *testing.T) {
+	mockRepo := new(mocks.MockUserRepository)
+	cfg := &config.Config{
+		SecretRefreshKey: "refresh_secret",
+	}
+	svc := service.NewUserService(mockRepo, cfg)
+
+	_, _, err := svc.RefreshToken(context.Background(), "invalid-token")
+
+	assert.Error(t, err)
+	assert.Equal(t, "invalid or expired refresh token", err.Error())
+	mockRepo.AssertNotCalled(t, "GetUserByUserID")
 }

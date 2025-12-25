@@ -29,6 +29,14 @@ func (m *MockUserRepository) GetUserByEmail(ctx context.Context, email string) (
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
+func (m *MockUserRepository) GetUserByUserID(ctx context.Context, userID string) (*models.User, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
 func (m *MockUserRepository) CountUsersByEmail(ctx context.Context, email string) (int64, error) {
 	args := m.Called(ctx, email)
 	return args.Get(0).(int64), args.Error(1)
